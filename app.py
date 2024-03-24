@@ -1,6 +1,9 @@
 from flask import Flask, request, jsonify
+from slvs_helper import Slvs_Helper
 
 app = Flask(__name__)
+
+slvs_helper = Slvs_Helper()
 
 # POST-Endpunkt
 @app.route('/postdata', methods=['POST'])
