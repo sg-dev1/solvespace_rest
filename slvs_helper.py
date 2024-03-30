@@ -29,6 +29,8 @@ class Slvs_Helper():
         self._entityIdBase = 100
         self._constraintIdBase = 1
 
+        self._pointDataLst = []
+
     def _genOrigin(self):
         # origin (x y z) = (0 0 0) of coordinate system
         self.sys.addParam(slvs.makeParam(1, self.workPlaneGroup, 0))
@@ -75,27 +77,38 @@ class Slvs_Helper():
             planeId = self.xzPlaneId
         elif plane == "yz":
             planeId = self.yzPlaneId
+        else:
+            assert False, "Invalid plane %s given." % plane
         return planeId
 
     def addPoint(self, plane, idHint, data):
         planeId = self._planeStrToPlaneId(plane)
 
-        # TODO either here we must select the proper points (according to plane) or the frontend needs to do it
+        # Select the proper points (according to plane)
+        if planeId == self.xyPlaneId:
+            u = data[0] # x
+            v = data[1] # y
+        elif planeId == self.xzPlaneId:
+            u = data[0] # x
+            v = data[2] # z
+        elif planeId == self.yzPlaneId:
+            u = data[1] # y
+            v = data[2] # z
+        else:
+            assert False, "Unknown plane id %d" % planeId
 
         p1Id = self._paramId
-        self.sys.addParam(slvs.makeParam(p1Id, self.solveGroup, data[0]))
+        self.sys.addParam(slvs.makeParam(p1Id, self.solveGroup, u))
         self._paramId = self._paramId + 1
         p2Id = self._paramId
-        self.sys.addParam(slvs.makeParam(p2Id, self.solveGroup, data[1]))
+        self.sys.addParam(slvs.makeParam(p2Id, self.solveGroup, v))
         self._paramId = self._paramId + 1
-        #p3Id = self._paramId
-        #self.sys.addParam(slvs.makeParam(p3Id, self.solveGroup, data[2]))
-        #self._paramId = self._paramId + 1
-        #self.sys.addEntity(slvs.makePoint3d(idHint + self._entityIdBase, self.solveGroup, planeId, p1Id, p2Id, p3Id))
 
-        print("make point with id %d and coords (%.3f, %.3f, %.3f)" % (idHint, data[0], data[1], data[2]))
+        print("Make point with id %d and coords (%.3f, %.3f). Input coords: (%.3f, %.3f, %.3f)" % (idHint, u, v, data[0], data[1], data[2]))
 
         self.sys.addEntity(slvs.makePoint2d(idHint + self._entityIdBase, self.solveGroup, planeId, p1Id, p2Id))
+
+        self._pointDataLst.append({"id": idHint + self._entityIdBase, "params": (p1Id, p2Id), "vals": (u, v)})
 
     def addLine(self, plane, idHint, data):
         planeId = self._planeStrToPlaneId(plane)
@@ -135,9 +148,14 @@ class Slvs_Helper():
         result = self.sys.solve(self.solveGroup, True)
 
         if result == SLVS_RESULT_OKAY:
-            # TODO parse the changed coordinates
             changedEntities = []
+            for p in self._pointDataLst:
+                u = self.sys.getParam(p["params"][0]).val
+                v = self.sys.getParam(p["params"][1]).val
+                if u != p["vals"][0] or v != p["vals"][1]:
+                    # substract the self._entityIdBase to get the orginal id sent by the frontend
+                    changedEntities.append({"id": p["id"] - self._entityIdBase, "t": "point", "v": [u, v]})
             return result, self.sys.Dof, changedEntities
         else:
-            # result code + list of ids of failed constraints
-            return result, self.sys.Failed, []
+            # result code + list of ids of failed constraints (corrected to the value sent by the frontend)
+            return result, [elem - self._constraintIdBase for elem in self.sys.Failed], []
