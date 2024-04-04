@@ -1,4 +1,5 @@
 import slvs
+import numbers
 
 # Taken from slvs.h
 SLVS_RESULT_OKAY=0
@@ -119,6 +120,15 @@ class Slvs_Helper():
             slvs.makeLineSegment(idHint + self._entityIdBase, self.solveGroup, planeId, data[0] + self._entityIdBase, data[1] + self._entityIdBase)
             )
     
+    def _getEntityId(self, entityIdStr):
+        if isinstance(entityIdStr, numbers.Number):
+            return entityIdStr + self._entityIdBase
+        else:
+            if "zero" == entityIdStr:
+                return self.originId
+            else:
+                raise ValueError("Unknown entity id %s received." % str(entityIdStr))
+    
     def addConstraint(self, plane, idHint, constraintType, data):
         planeId = self._planeStrToPlaneId(plane)
 
@@ -127,16 +137,16 @@ class Slvs_Helper():
         valA = data[0]
         ptA = 0
         if data[1] != 0:
-            ptA = data[1] + self._entityIdBase
+            ptA = self._getEntityId(data[1])
         ptB = 0
         if data[2] != 0:
-            ptB = data[2] + self._entityIdBase
+            ptB = self._getEntityId(data[2])
         entityA = 0
         if data[3] != 0:
-            entityA = data[3] + self._entityIdBase
+            entityA = self._getEntityId(data[3])
         entityB = 0
         if data[4] != 0:
-            entityB = data[4] + self._entityIdBase
+            entityB = self._getEntityId(data[4])
 
         print("\t%.3f, %d, %d, %d, %d" % (valA, ptA, ptB, entityA, entityB))
 
