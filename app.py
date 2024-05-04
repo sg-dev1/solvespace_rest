@@ -21,6 +21,8 @@ def post_data():
                 my_slvs_helper.addPoint(data["workplane"], entity["id"], entity["v"])
             elif entity["t"] == "line":
                 my_slvs_helper.addLine(data["workplane"], entity["id"], entity["v"])
+            elif entity["t"] == "circle":
+                my_slvs_helper.addCircle(data["workplane"], entity["id"], entity["v"])
             else:
                 print("Warning entity of type %s not yet supported" % entity.t)
         for constraint in data["constraints"]:

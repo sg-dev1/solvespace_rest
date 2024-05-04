@@ -81,6 +81,18 @@ class Slvs_Helper():
         else:
             assert False, "Invalid plane %s given." % plane
         return planeId
+        
+    def _planeStrToNormalId(self, plane):
+        normalId = -1
+        if plane == "xy":
+            normalId = self.xyNormalId
+        elif plane == "xz":
+            normalId = self.xzNormalId
+        elif plane == "yz":
+            normalId = self.yzNormalId
+        else:
+            assert False, "Invalid plane %s given." % plane
+        return normalId
 
     def addPoint(self, plane, idHint, data):
         planeId = self._planeStrToPlaneId(plane)
@@ -118,6 +130,20 @@ class Slvs_Helper():
 
         self.sys.addEntity(
             slvs.makeLineSegment(idHint + self._entityIdBase, self.solveGroup, planeId, data[0] + self._entityIdBase, data[1] + self._entityIdBase)
+            )
+            
+    def addCircle(self, plane, idHint, data):
+        planeId = self._planeStrToPlaneId(plane)
+        normalId = self._planeStrToNormalId(plane)
+
+        print("add circle with id %d and data %s" % (idHint, str(data)))
+        
+        radiusParamId = self._paramId
+        self.sys.addParam(slvs.makeParam(radiusParamId, self.solveGroup, data[1]))
+        self._paramId = self._paramId + 1
+        
+        self.sys.addEntity(
+            slvs.makeCircle(idHint + self._entityIdBase, self.solveGroup, planeId, data[0] + self._entityIdBase, normalId,  radiusParamId)
             )
     
     def _getEntityId(self, entityIdStr):
