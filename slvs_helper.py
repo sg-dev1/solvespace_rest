@@ -27,10 +27,12 @@ class Slvs_Helper():
         self._genYzPlane()
 
         self._paramId = 100
-        self._entityIdBase = 100
+        self._circleDistanceId = 100
+        self._entityIdBase = 1000
         self._constraintIdBase = 1
 
         self._pointDataLst = []
+        self._circleDataLst = []
 
     def _genOrigin(self):
         # origin (x y z) = (0 0 0) of coordinate system
@@ -133,6 +135,12 @@ class Slvs_Helper():
             )
             
     def addCircle(self, plane, idHint, data):
+        if (self._circleDistanceId >= self._entityIdBase):
+            # Note: With _circleDistanceId starting at 100 and _entityIdBase being 1000 we can draw up to 
+            #       900 circles in a sketch
+            print("Error adding circle with id %d and data %s. Too much circles drawn in sketch." % (idHint, str(data)))
+            return
+    
         planeId = self._planeStrToPlaneId(plane)
         normalId = self._planeStrToNormalId(plane)
 
@@ -142,9 +150,18 @@ class Slvs_Helper():
         self.sys.addParam(slvs.makeParam(radiusParamId, self.solveGroup, data[1]))
         self._paramId = self._paramId + 1
         
+        # The radius of a circle must also be an entity of type distance
+        circleDistanceId = self._circleDistanceId
         self.sys.addEntity(
-            slvs.makeCircle(idHint + self._entityIdBase, self.solveGroup, planeId, data[0] + self._entityIdBase, normalId,  radiusParamId)
+            slvs.makeDistance(circleDistanceId, self.solveGroup, planeId, radiusParamId)
             )
+        self._circleDistanceId = self._circleDistanceId + 1
+        
+        self.sys.addEntity(
+            slvs.makeCircle(idHint + self._entityIdBase, self.solveGroup, planeId, data[0] + self._entityIdBase, normalId,  circleDistanceId)
+            )
+            
+        self._circleDataLst.append({"id": idHint + self._entityIdBase, "params": (radiusParamId, data[0] + self._entityIdBase), "vals": (data[1], )})
     
     def _getEntityId(self, entityIdStr):
         if isinstance(entityIdStr, numbers.Number):
@@ -191,6 +208,12 @@ class Slvs_Helper():
                 if u != p["vals"][0] or v != p["vals"][1]:
                     # substract the self._entityIdBase to get the orginal id sent by the frontend
                     changedEntities.append({"id": p["id"] - self._entityIdBase, "t": "point", "v": [u, v]})
+            for c in self._circleDataLst:
+                radius = self.sys.getParam(c["params"][0]).val
+                if radius != c["vals"][0]:
+                    # substract the self._entityIdBase to get the orginal id sent by the frontend
+                    # Format for circle is [<center-pt>, <radius>]
+                    changedEntities.append({"id": c["id"] - self._entityIdBase, "t": "circle", "v": [c["params"][1] - self._entityIdBase, radius]})
             return result, self.sys.Dof, changedEntities
         else:
             # result code + list of ids of failed constraints (corrected to the value sent by the frontend)

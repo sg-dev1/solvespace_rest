@@ -30,7 +30,7 @@ def post_data():
 
         code, a, b = my_slvs_helper.solve()
 
-        result = {"code": code}
+        result = {"workplane": data["workplane"], "code": code}
         print("code=%d" % code)
         if code == 0:
             print("dof=%d" % a)
