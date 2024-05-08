@@ -172,6 +172,14 @@ class Slvs_Helper():
                 return self.originId
             else:
                 raise ValueError("Unknown entity id %s received." % str(entityIdStr))
+                
+    def _getCoordsForPoint(self, pointId):
+        point_x_param = self.sys.getEntityParam(pointId, 0)
+        point_y_param = self.sys.getEntityParam(pointId, 1)
+        point_x = self.sys.getParam(point_x_param).val
+        point_y = self.sys.getParam(point_y_param).val
+        #print(pointId, point_x_param, point_y_param, point_x, point_y)
+        return (point_x, point_y)
     
     def addConstraint(self, plane, idHint, constraintType, data):
         planeId = self._planeStrToPlaneId(plane)
@@ -193,10 +201,55 @@ class Slvs_Helper():
             entityB = self._getEntityId(data[4])
 
         print("\t%.3f, %d, %d, %d, %d" % (valA, ptA, ptB, entityA, entityB))
+        
+        c = slvs.makeConstraint(idHint + self._constraintIdBase, self.solveGroup, constraintType, planeId, valA, ptA, ptB, entityA, entityB)
+        if constraintType == slvs.SLVS_C_ANGLE:
+            #line1 = self.sys.getEntity(entityA)
+            #line2 = self.sys.getEntity(entityB)
+            #print(line1)
+            #print(line2)
+            # Endpoints of line1
+            point1_1 = self.sys.getEntityPoint(entityA, 0)
+            point1_1_x, point1_1_y = self._getCoordsForPoint(point1_1)
+            point2_1 = self.sys.getEntityPoint(entityA, 1)
+            point2_1_x, point2_1_y = self._getCoordsForPoint(point2_1)
+            # vector of line 1
+            v1 = (point2_1_x - point1_1_x, point2_1_y - point1_1_y)
+            # Endpoints of line 2
+            point1_2 = self.sys.getEntityPoint(entityB, 0)
+            point1_2_x, point1_2_y = self._getCoordsForPoint(point1_2)
+            point2_2 = self.sys.getEntityPoint(entityB, 1)
+            point2_2_x, point2_2_y = self._getCoordsForPoint(point2_2)
+            # vector of line 2
+            v2 = (point2_2_x - point1_2_x, point2_2_y - point1_2_y)
+            #print(v1)
+            #print(v2)
+            # different cases for points that were added first and points that were added later
+            if point2_1 <= point1_2 and point2_1 <= point2_2:
+                #print("case1")
+                # distance squared from endpoint of first line to start point of second line
+                x1 = (point2_1_x - point1_2_x)**2 + (point2_1_y - point1_2_y)**2
+                # distance squared from endpoint of first line to endpoint of second line
+                x2 = (point2_1_x - point2_2_x)**2 + (point2_1_y - point2_2_y)**2
+                #print(x1)
+                #print(x2)
+                if x1 < x2:
+                    #print("--- need a swap ---")
+                    c.other = True
+            else:
+                #print("case2")
+                # distance squared start of first line to end of second line
+                x1 = (point1_1_x - point2_2_x)**2 + (point1_1_y - point2_2_y)**2
+                # distance squared from endpoint of first line to endpoint of second line
+                x2 = (point2_1_x - point2_2_x)**2 + (point2_1_y - point2_2_y)**2
+                #print(x1)
+                #print(x2)
+                if x1 < x2:
+                    #print("--- need a swap ---")
+                    c.other = True
+            
 
-        self.sys.addConstraint(
-            slvs.makeConstraint(idHint + self._constraintIdBase, self.solveGroup, constraintType, planeId, valA, ptA, ptB, entityA, entityB)
-            )
+        self.sys.addConstraint(c)
 
     def solve(self):
         result = self.sys.solve(self.solveGroup, True)
