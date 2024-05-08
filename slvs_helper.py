@@ -1,4 +1,5 @@
 import slvs
+import math
 import numbers
 
 # Taken from slvs.h
@@ -205,12 +206,12 @@ class Slvs_Helper():
             for p in self._pointDataLst:
                 u = self.sys.getParam(p["params"][0]).val
                 v = self.sys.getParam(p["params"][1]).val
-                if u != p["vals"][0] or v != p["vals"][1]:
+                if not math.isclose(u, p["vals"][0], rel_tol=1e-3) or not math.isclose(v, p["vals"][1], rel_tol=1e-3):
                     # substract the self._entityIdBase to get the orginal id sent by the frontend
                     changedEntities.append({"id": p["id"] - self._entityIdBase, "t": "point", "v": [u, v]})
             for c in self._circleDataLst:
                 radius = self.sys.getParam(c["params"][0]).val
-                if radius != c["vals"][0]:
+                if not math.isclose(radius, c["vals"][0], rel_tol=1e-3):
                     # substract the self._entityIdBase to get the orginal id sent by the frontend
                     # Format for circle is [<center-pt>, <radius>]
                     changedEntities.append({"id": c["id"] - self._entityIdBase, "t": "circle", "v": [c["params"][1] - self._entityIdBase, radius]})
