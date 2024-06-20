@@ -108,8 +108,8 @@ class Slvs_Helper():
             u = data[0] # x
             v = data[2] # z
         elif planeId == self.yzPlaneId:
-            u = data[1] # y
-            v = data[2] # z
+            u = data[2] # y
+            v = data[1] # z
         else:
             assert False, "Unknown plane id %d" % planeId
 
