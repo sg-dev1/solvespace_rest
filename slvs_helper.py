@@ -8,6 +8,8 @@ SLVS_RESULT_INCONSISTENT=1
 SLVS_RESULT_DIDNT_CONVERGE=2
 SLVS_RESULT_TOO_MANY_UNKNOWNS=3
 
+ROUND_DIGITS = 6
+
 class Slvs_Helper():
     def __init__(self):
         self.sys = slvs.System()
@@ -112,6 +114,9 @@ class Slvs_Helper():
             v = data[1] # z
         else:
             assert False, "Unknown plane id %d" % planeId
+            
+        u = round(u, ROUND_DIGITS)
+        v = round(v, ROUND_DIGITS)
 
         p1Id = self._paramId
         self.sys.addParam(slvs.makeParam(p1Id, self.solveGroup, u))
@@ -148,7 +153,8 @@ class Slvs_Helper():
         print("add circle with id %d and data %s" % (idHint, str(data)))
         
         radiusParamId = self._paramId
-        self.sys.addParam(slvs.makeParam(radiusParamId, self.solveGroup, data[1]))
+        radiusValue = round(data[1], ROUND_DIGITS)
+        self.sys.addParam(slvs.makeParam(radiusParamId, self.solveGroup, radiusValue))
         self._paramId = self._paramId + 1
         
         # The radius of a circle must also be an entity of type distance
@@ -162,7 +168,7 @@ class Slvs_Helper():
             slvs.makeCircle(idHint + self._entityIdBase, self.solveGroup, planeId, data[0] + self._entityIdBase, normalId,  circleDistanceId)
             )
             
-        self._circleDataLst.append({"id": idHint + self._entityIdBase, "params": (radiusParamId, data[0] + self._entityIdBase), "vals": (data[1], )})
+        self._circleDataLst.append({"id": idHint + self._entityIdBase, "params": (radiusParamId, data[0] + self._entityIdBase), "vals": (radiusValue, )})
     
     def _getEntityId(self, entityIdStr):
         if isinstance(entityIdStr, numbers.Number):
@@ -186,7 +192,7 @@ class Slvs_Helper():
 
         print("add constraint with id %d and type %d and data %s" % (idHint, constraintType, str(data)))
 
-        valA = data[0]
+        valA = round(data[0], ROUND_DIGITS)
         ptA = 0
         if data[1] != 0:
             ptA = self._getEntityId(data[1])
@@ -257,13 +263,13 @@ class Slvs_Helper():
         if result == SLVS_RESULT_OKAY:
             changedEntities = []
             for p in self._pointDataLst:
-                u = self.sys.getParam(p["params"][0]).val
-                v = self.sys.getParam(p["params"][1]).val
+                u = round(self.sys.getParam(p["params"][0]).val, ROUND_DIGITS)
+                v = round(self.sys.getParam(p["params"][1]).val, ROUND_DIGITS)
                 if not math.isclose(u, p["vals"][0], rel_tol=1e-3) or not math.isclose(v, p["vals"][1], rel_tol=1e-3):
                     # substract the self._entityIdBase to get the orginal id sent by the frontend
                     changedEntities.append({"id": p["id"] - self._entityIdBase, "t": "point", "v": [u, v]})
             for c in self._circleDataLst:
-                radius = self.sys.getParam(c["params"][0]).val
+                radius = round(self.sys.getParam(c["params"][0]).val, ROUND_DIGITS)
                 if not math.isclose(radius, c["vals"][0], rel_tol=1e-3):
                     # substract the self._entityIdBase to get the orginal id sent by the frontend
                     # Format for circle is [<center-pt>, <radius>]
